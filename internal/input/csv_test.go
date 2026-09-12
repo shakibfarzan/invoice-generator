@@ -151,7 +151,7 @@ func TestParseItemsCSVErrors(t *testing.T) {
 		},
 		{
 			name:      "invalid unit_price reports row number",
-			input:     "description,quantity,unit_price\nA,1,42\nB,two,42\n",
+			input:     "description,quantity,unit_price\nA,1,42\nB,1,two\n",
 			wantError: `row 3: unit_price "two" is not a valid number`,
 		},
 		{

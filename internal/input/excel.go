@@ -15,6 +15,14 @@ const (
 	itemsSheetName   = "Items"
 
 	dateLayout = "2006-01-02"
+
+	// invoiceHeaderKey is the normalized label of the key column in the
+	// "Field, Value" header row of the Invoice sheet.
+	invoiceHeaderKey = "field"
+
+	// invoiceSheetColumns is the width of the Invoice sheet: a field column
+	// and a value column.
+	invoiceSheetColumns = 2
 )
 
 // ParseInvoiceExcel opens an .xlsx workbook and converts the "Invoice" and
@@ -78,12 +86,25 @@ func parseInvoiceSheet(f *excelize.File) (invoice.Invoice, error) {
 		if isBlankRow(row) {
 			continue
 		}
-		if len(row) < 2 {
-			return invoice.Invoice{}, fmt.Errorf("row %d: expected two columns (Field, Value), got %d", rowNumber, len(row))
-		}
 
 		key := normalizeKey(row[0])
-		value := strings.TrimSpace(row[1])
+
+		// The "Field, Value" row only labels the two columns, so it carries no
+		// metadata. A header without a value column means the sheet is not a
+		// key/value table at all, which is worth reporting as such.
+		if key == invoiceHeaderKey {
+			if len(row) < invoiceSheetColumns {
+				return invoice.Invoice{}, fmt.Errorf("row %d: expected two columns (Field, Value), got %d", rowNumber, len(row))
+			}
+			continue
+		}
+
+		// Reading a sheet through excelize drops trailing blank cells, so a row
+		// that stops after its first column is a field with an empty value.
+		value := ""
+		if len(row) > 1 {
+			value = strings.TrimSpace(row[1])
+		}
 
 		switch key {
 		case "invoice_number":
