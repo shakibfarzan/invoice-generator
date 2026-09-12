@@ -24,11 +24,18 @@ jobs:
       - name: Check formatting (gofmt)
         run: |
           unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "These files are not gofmt-clean:"
-            echo "$unformatted"
-            exit 1
+          if [ -z "$unformatted" ]; then
+            echo "All files are gofmt-clean."
+            exit 0
           fi
+          for f in $unformatted; do
+            echo "::error file=$f,title=Not gofmt-clean::run gofmt -w $f"
+            diff=$(gofmt -d "$f" | head -c 2800)
+            diff="${diff//$'\n'/'%0A'}"
+            diff="${diff//$'\r'/'%0D'}"
+            echo "::error file=$f,title=gofmt diff::$diff"
+          done
+          exit 1
 
       - name: Vet
         run: go vet ./...
