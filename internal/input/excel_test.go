@@ -242,7 +242,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: "missing sheet: Invoice",
 		},
 		{
-			name:      "missing field",
+			name: "missing field",
 			file: newWorkbook(t).
 				withInvoiceRows([][]any{
 					{"Field", "Value"},
@@ -254,7 +254,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: "missing field: customer",
 		},
 		{
-			name:      "several missing fields reported together",
+			name: "several missing fields reported together",
 			file: newWorkbook(t).
 				withInvoiceRows([][]any{{"Field", "Value"}}).
 				withItemsRows(defaultItemsRows()).
@@ -262,7 +262,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: "missing field: invoice_number, date, customer",
 		},
 		{
-			name:      "blank value counts as missing field",
+			name: "blank value counts as missing field",
 			file: newWorkbook(t).
 				withInvoiceRows([][]any{
 					{"Field", "Value"},
@@ -275,7 +275,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: "missing field: invoice_number",
 		},
 		{
-			name:      "unknown field catches typos",
+			name: "unknown field catches typos",
 			file: newWorkbook(t).
 				withInvoiceRows([][]any{
 					{"Field", "Value"},
@@ -288,7 +288,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: `unknown field "custmer" on row 3`,
 		},
 		{
-			name:      "invalid date format",
+			name: "invalid date format",
 			file: newWorkbook(t).
 				withInvoiceRows([][]any{
 					{"Field", "Value"},
@@ -301,7 +301,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: `invalid date "12/09/2026" on row 3: must be 2006-01-02`,
 		},
 		{
-			name:      "single column row in Invoice sheet",
+			name: "single column row in Invoice sheet",
 			file: newWorkbook(t).
 				withInvoiceRows([][]any{
 					{"Field"},
@@ -312,7 +312,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: "expected two columns (Field, Value), got 1",
 		},
 		{
-			name:      "invalid quantity reports sheet and row",
+			name: "invalid quantity reports sheet and row",
 			file: newWorkbook(t).
 				withInvoiceRows(defaultInvoiceRows()).
 				withItemsRows([][]any{
@@ -324,7 +324,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: `sheet "Items": row 3: quantity "abc" is not a valid number`,
 		},
 		{
-			name:      "missing item headers",
+			name: "missing item headers",
 			file: newWorkbook(t).
 				withInvoiceRows(defaultInvoiceRows()).
 				withItemsRows([][]any{{"description", "quantity"}}).
@@ -332,7 +332,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: `sheet "Items": missing header: unit_price`,
 		},
 		{
-			name:      "empty Items sheet",
+			name: "empty Items sheet",
 			file: newWorkbook(t).
 				withInvoiceRows(defaultInvoiceRows()).
 				withItemsRows(nil).
@@ -340,7 +340,7 @@ func TestParseInvoiceExcelErrors(t *testing.T) {
 			wantError: `sheet "Items": missing header row`,
 		},
 		{
-			name:      "unknown item column",
+			name: "unknown item column",
 			file: newWorkbook(t).
 				withInvoiceRows(defaultInvoiceRows()).
 				withItemsRows([][]any{
