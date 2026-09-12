@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Format, vet, test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Check formatting (gofmt)
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -z "$unformatted" ]; then
+            echo "All files are gofmt-clean."
+            exit 0
+          fi
+          for f in $unformatted; do
+            echo "::error file=$f,title=Not gofmt-clean::run gofmt -w $f"
+            diff=$(gofmt -d "$f" | head -c 2800)
+            diff="${diff//$'\n'/'%0A'}"
+            diff="${diff//$'\r'/'%0D'}"
+            echo "::error file=$f,title=gofmt diff::$diff"
+          done
+          exit 1
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...

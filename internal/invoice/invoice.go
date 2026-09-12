@@ -14,9 +14,9 @@ type InvoiceItem struct {
 }
 
 type Invoice struct {
-	Number string
-	Date   time.Time
-	Customer string
-	Items []InvoiceItem
+	Number      string
+	Date        time.Time
+	Customer    string
+	Items       []InvoiceItem
 	Description string
 }
