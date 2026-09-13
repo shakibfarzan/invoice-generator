@@ -11,6 +11,12 @@
 # Test binary, built with `go test -c`
 *.test
 
+# Built CLI
+/invoice
+
+# Generated PDFs
+output/
+
 # Code coverage profiles and other test artifacts
 *.out
 coverage.*
