@@ -185,8 +185,8 @@ func printSummary(inv invoice.Invoice, total int64) {
 
 	// Items table
 	fmt.Println()
-	fmt.Printf("  %-4s  %-30s  %6s  %12s  %12s\n",
-		"No.", "Description", "Qty", "Unit Price", "Price")
+	fmt.Printf("  %-4s  %-30s  %6s  %12s  %16s  %12s\n",
+		"No.", "Description", "Qty", "Unit Price", "Discount Percent", "Price")
 	fmt.Println("  " + strings.Repeat("-", 72))
 
 	for i, item := range inv.Items {
@@ -194,8 +194,8 @@ func printSummary(inv invoice.Invoice, total int64) {
 		if len(desc) > 30 {
 			desc = desc[:27] + "..."
 		}
-		fmt.Printf("  %-4d  %-30s  %6d  %12d  %12d\n",
-			i+1, desc, item.Quantity, item.FinalUnitPrice, item.Price)
+		fmt.Printf("  %-4d  %-30s  %6d  %12d  %16f  %12d\n",
+			i+1, desc, item.Quantity, item.FinalUnitPrice, item.DiscountPercent, item.Price)
 	}
 
 	fmt.Println("  " + strings.Repeat("-", 72))
