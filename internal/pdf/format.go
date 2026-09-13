@@ -1,9 +1,14 @@
 package pdf
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
+
+import ptime "github.com/yaa110/go-persian-calendar"
+
 
 // digitGroupSeparator separates thousands in rendered amounts.
 const digitGroupSeparator = ","
@@ -11,6 +16,11 @@ const digitGroupSeparator = ","
 // percentSign is the Persian/Arabic percent sign, which reads correctly in
 // an RTL document.
 const percentSign = "٪"
+
+var faDigits = strings.NewReplacer(
+	"0", "۰", "1", "۱", "2", "۲", "3", "۳", "4", "۴",
+	"5", "۵", "6", "۶", "7", "۷", "8", "۸", "9", "۹",
+)
 
 // FormatMoney renders an amount as digits grouped in threes.
 //
@@ -62,4 +72,26 @@ func groupDigits(digits string) string {
 		b.WriteString(digits[i : i+3])
 	}
 	return b.String()
+}
+
+func ToPersianDigits(v any) string {
+	var s string
+	switch x := v.(type) {
+	case string:
+		s = x
+	case int:
+		s = strconv.Itoa(x)
+	case int64:
+		s = strconv.FormatInt(x, 10)
+	case float64:
+		s = strconv.FormatFloat(x, 'f', -1, 64)
+	default:
+		s = fmt.Sprintf("%v", x)
+	}
+	return faDigits.Replace(s)
+}
+
+func ToJalali(t time.Time) string {
+	pt := ptime.New(t)
+	return ToPersianDigits(fmt.Sprintf("%04d/%02d/%02d", pt.Year(), int(pt.Month()), pt.Day()))
 }

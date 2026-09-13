@@ -13,8 +13,10 @@
 <html lang="fa" dir="rtl">
 <head>
 	<meta charset="utf-8">
-	<title>فاکتور {{.Invoice.Number}}</title>
+	<title>فاکتور {{fa .Invoice.Number}}</title>
 	<style>
+		{{.FontFaceCSS}}
+
 		@page {
 			size: A4;
 			margin: 0;
@@ -295,17 +297,16 @@
 		<header class="header">
 			<div>
 				<h1 class="title">فاکتور فروش</h1>
-				<p class="subtitle">INVOICE</p>
 			</div>
 
 			<table class="meta">
 				<tr>
 					<th>شماره فاکتور</th>
-					<td>{{.Invoice.Number}}</td>
+					<td>{{fa .Invoice.Number}}</td>
 				</tr>
 				<tr>
 					<th>تاریخ</th>
-					<td>{{.Date}}</td>
+					<td>{{fa .Date}}</td>
 				</tr>
 			</table>
 		</header>
@@ -347,7 +348,7 @@
 					<td class="col-no">{{inc $i}}</td>
 					<td class="col-code">{{if $item.TechnicalCode}}{{$item.TechnicalCode}}{{else}}<span class="empty">—</span>{{end}}</td>
 					<td class="description">{{$item.Description}}</td>
-					<td class="col-qty">{{$item.Quantity}}</td>
+					<td class="col-qty">{{fa $item.Quantity}}</td>
 					<td class="col-money">{{money $item.UnitPrice}}</td>
 					{{if $.HasDiscount}}
 					<td class="col-discount">

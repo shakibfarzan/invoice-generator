@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"strconv"
 	"strings"
 
 	"invoice-generator/internal/invoice"
@@ -55,6 +56,8 @@ type View struct {
 	// column. Persian invoices omit it entirely when nothing is
 	// discounted, which keeps the table narrow.
 	HasDiscount bool
+
+	FontFaceCSS template.CSS
 }
 
 // NewView builds the template data for an invoice whose items have already
@@ -64,10 +67,11 @@ func NewView(inv invoice.Invoice, total int64) View {
 		Invoice: inv,
 		Items:   inv.Items,
 		Total:   total,
+		FontFaceCSS: template.CSS(FontFaceCSS()),
 	}
 
 	if !inv.Date.IsZero() {
-		view.Date = inv.Date.Format(dateLayout)
+		view.Date = ToJalali(inv.Date)
 	}
 
 	for _, item := range inv.Items {
@@ -112,9 +116,10 @@ func ParseTemplate() (*template.Template, error) {
 	//	inc   turns a zero-based range index into a row number
 	tmpl, err := template.New(templateName).
 		Funcs(template.FuncMap{
-			"money": FormatMoney,
-			"pct":   FormatPercent,
-			"inc":   func(i int) int { return i + 1 },
+			"money": func(v int64) string { return ToPersianDigits(FormatMoney(v)) },
+			"pct":   func(v float32) string { return ToPersianDigits(FormatPercent(v)) },
+			"inc":   func(i int) string { return ToPersianDigits(strconv.Itoa(i + 1)) },
+			"fa": ToPersianDigits,
 		}).
 		Parse(templates.InvoiceHTML)
 	if err != nil {
