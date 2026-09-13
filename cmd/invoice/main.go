@@ -7,17 +7,24 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/spf13/cobra"
 
 	"invoice-generator/internal/input"
 	"invoice-generator/internal/invoice"
+	"invoice-generator/internal/pdf"
 )
+
+// pdfTimeout bounds how long headless Chromium may take to print a single
+// invoice. Without it, a hung browser would hang the CLI forever.
+const pdfTimeout = 60 * time.Second
 
 // ---------------------------------------------------------------------------
 // Flags — variables that CLI flags write into.
@@ -28,6 +35,8 @@ var (
 	flagNumber   string
 	flagDate     string
 	flagCustomer string
+	// Where the generated PDF is written.
+	flagOutput string
 )
 
 // ---------------------------------------------------------------------------
@@ -52,7 +61,8 @@ validates it, runs calculations, and (eventually) produces a PDF.`,
 		Use:   "generate [file]",
 		Short: "Parse, validate, and calculate totals for an invoice",
 		Long: `Read an invoice from an Excel (.xlsx) or CSV file, validate it against
-business rules, compute every item's price, and print a summary.
+business rules, compute every item's price, print a summary, and write a PDF
+to the output directory as invoice-<number>.pdf.
 
 Excel workbooks must contain two sheets:
   • "Invoice" — key/value metadata (invoice_number, date, customer, ...)
@@ -76,6 +86,8 @@ the --number, --date, and --customer flags.`,
 		"invoice date in YYYY-MM-DD format (required when input is CSV)")
 	generateCmd.Flags().StringVar(&flagCustomer, "customer", "",
 		"customer name (required when input is CSV)")
+	generateCmd.Flags().StringVarP(&flagOutput, "output", "o", "output",
+		"directory where the PDF is written")
 
 	// Wire the subcommand into the root.
 	rootCmd.AddCommand(generateCmd)
@@ -118,7 +130,60 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	// 4. Print summary -------------------------------------------------------
 	printSummary(inv, total)
 
+	// 5. Write the PDF -------------------------------------------------------
+	outputPath, err := writePDF(inv, total)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("✓ Wrote %s\n", outputPath)
+
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// writePDF — render an invoice and save it as output/invoice-<number>.pdf.
+// ---------------------------------------------------------------------------
+
+func writePDF(inv invoice.Invoice, total int64) (string, error) {
+	// Roadmap step 17: the file name is derived from the invoice number,
+	// so that number has to be made safe before it touches the filesystem.
+	outputPath := filepath.Join(flagOutput, "invoice-"+sanitizeFilePart(inv.Number)+".pdf")
+
+	ctx, cancel := context.WithTimeout(context.Background(), pdfTimeout)
+	defer cancel()
+
+	if err := pdf.Generate(ctx, inv, total, outputPath); err != nil {
+		return "", err
+	}
+	return outputPath, nil
+}
+
+// sanitizeFilePart reduces a string to characters that are safe inside a
+// single file name.
+//
+// Everything that could change the meaning of a path — separators, spaces,
+// control characters, or a name made only of dots — is replaced or dropped,
+// so an invoice number like "../../etc/passwd" can never write outside the
+// output directory.
+func sanitizeFilePart(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case unicode.IsLetter(r), unicode.IsDigit(r):
+			b.WriteRune(r)
+		case r == '-', r == '_', r == '.':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+
+	cleaned := strings.Trim(b.String(), "-._")
+	if cleaned == "" {
+		return "unknown"
+	}
+	return cleaned
 }
 
 // ---------------------------------------------------------------------------
@@ -201,5 +266,4 @@ func printSummary(inv invoice.Invoice, total int64) {
 	fmt.Println("  " + strings.Repeat("-", 72))
 	fmt.Printf("  %54s  %12d\n", "Total:", total)
 	fmt.Println()
-	fmt.Println("  (PDF generation coming in a future step)")
 }

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<!--
+	Invoice template (roadmap step 11).
+
+	Rendered by internal/pdf with the View struct defined in renderer.go.
+	It receives the invoice, its items and the grand total, and does no
+	calculation of its own — every number arrives already computed.
+
+	The document is RTL and Persian by default (step 13). The font stack
+	starts with the common Persian faces and falls back to Tahoma, which
+	ships with Windows and covers Arabic/Persian.
+-->
+<html lang="fa" dir="rtl">
+<head>
+	<meta charset="utf-8">
+	<title>فاکتور {{.Invoice.Number}}</title>
+	<style>
+		@page {
+			size: A4;
+			margin: 0;
+		}
+
+		:root {
+			--ink: #1f2328;
+			--muted: #6b7280;
+			--line: #d7dce3;
+			--head: #f4f6f9;
+			--accent: #111827;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		html, body {
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: "Vazirmatn", "IRANSans", "Shabnam", "Tahoma", "DejaVu Sans", sans-serif;
+			font-size: 10.5pt;
+			line-height: 1.65;
+			color: var(--ink);
+			background: #fff;
+		}
+
+		.page {
+			width: 210mm;
+			min-height: 297mm;
+			padding: 14mm;
+			margin: 0 auto;
+		}
+
+		/* ---------- Header ---------- */
+
+		.header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			padding-bottom: 6mm;
+			border-bottom: 2px solid var(--accent);
+		}
+
+		.title {
+			margin: 0;
+			font-size: 20pt;
+			font-weight: 700;
+			letter-spacing: 0;
+		}
+
+		.subtitle {
+			margin: 1mm 0 0;
+			font-size: 9pt;
+			color: var(--muted);
+			letter-spacing: 1px;
+		}
+
+		.meta {
+			border-collapse: collapse;
+			font-size: 9.5pt;
+		}
+
+		.meta th,
+		.meta td {
+			padding: 1mm 0;
+			text-align: right;
+			font-weight: 400;
+		}
+
+		.meta th {
+			padding-left: 4mm;
+			color: var(--muted);
+			white-space: nowrap;
+		}
+
+		.meta td {
+			font-weight: 600;
+			white-space: nowrap;
+		}
+
+		/* ---------- Parties ---------- */
+
+		.parties {
+			display: flex;
+			gap: 8mm;
+			margin-top: 8mm;
+		}
+
+		.party {
+			flex: 1 1 0;
+			border: 1px solid var(--line);
+			border-radius: 2mm;
+			padding: 4mm 5mm;
+		}
+
+		.party h2 {
+			margin: 0 0 2mm;
+			font-size: 9pt;
+			font-weight: 700;
+			color: var(--muted);
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.party .name {
+			margin: 0;
+			font-size: 11pt;
+			font-weight: 600;
+		}
+
+		.party .detail {
+			margin: 0;
+			font-size: 9.5pt;
+			color: var(--muted);
+		}
+
+		.empty {
+			color: var(--muted);
+		}
+
+		/* ---------- Items ---------- */
+
+		.items {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 8mm;
+			font-size: 9.5pt;
+		}
+
+		.items th,
+		.items td {
+			border-bottom: 1px solid var(--line);
+			padding: 2.5mm 3mm;
+			text-align: right;
+			vertical-align: middle;
+		}
+
+		.items thead th {
+			background: var(--head);
+			border-bottom: 1px solid var(--accent);
+			font-size: 8.5pt;
+			font-weight: 700;
+			color: var(--muted);
+			white-space: nowrap;
+		}
+
+		.items tbody tr:nth-child(even) td {
+			background: #fbfcfd;
+		}
+
+		.col-no {
+			width: 8mm;
+			text-align: center;
+		}
+
+		.col-code {
+			width: 22mm;
+			white-space: nowrap;
+		}
+
+		.col-qty {
+			width: 14mm;
+			text-align: center;
+		}
+
+		.col-discount {
+			width: 16mm;
+			text-align: center;
+		}
+
+		.col-money {
+			width: 28mm;
+			text-align: left;
+			direction: ltr;
+			white-space: nowrap;
+		}
+
+		.description {
+			font-weight: 500;
+		}
+
+		/* ---------- Totals ---------- */
+
+		.totals {
+			width: 65mm;
+			margin-top: 6mm;
+			margin-right: auto;
+			margin-left: 0;
+			border-collapse: collapse;
+			font-size: 10.5pt;
+		}
+
+		.totals td {
+			padding: 2.5mm 3mm;
+			border-top: 1px solid var(--line);
+		}
+
+		.totals .grand {
+			border-top: 2px solid var(--accent);
+			font-size: 12pt;
+			font-weight: 700;
+		}
+
+		.totals .grand .amount {
+			text-align: left;
+			direction: ltr;
+			white-space: nowrap;
+		}
+
+		.totals .unit {
+			font-size: 9pt;
+			font-weight: 400;
+			color: var(--muted);
+			padding-right: 1.5mm;
+		}
+
+		/* ---------- Notes ---------- */
+
+		.notes {
+			margin-top: 10mm;
+			padding: 4mm 5mm;
+			border: 1px solid var(--line);
+			border-radius: 2mm;
+			background: #fbfcfd;
+		}
+
+		.notes h2 {
+			margin: 0 0 2mm;
+			font-size: 9pt;
+			font-weight: 700;
+			color: var(--muted);
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.notes p {
+			margin: 0;
+			white-space: pre-line;
+		}
+
+		/* ---------- Footer ---------- */
+
+		.footer {
+			margin-top: 14mm;
+			padding-top: 4mm;
+			border-top: 1px solid var(--line);
+			font-size: 8.5pt;
+			color: var(--muted);
+		}
+
+		.signatures {
+			display: flex;
+			gap: 12mm;
+			margin-top: 16mm;
+			font-size: 9pt;
+		}
+
+		.signature {
+			flex: 1 1 0;
+			text-align: center;
+		}
+
+		.signature .line {
+			border-top: 1px solid var(--ink);
+			padding-top: 2mm;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="page">
+
+		<!-- Header: title on the right, invoice metadata on the left -->
+		<header class="header">
+			<div>
+				<h1 class="title">فاکتور فروش</h1>
+				<p class="subtitle">INVOICE</p>
+			</div>
+
+			<table class="meta">
+				<tr>
+					<th>شماره فاکتور</th>
+					<td>{{.Invoice.Number}}</td>
+				</tr>
+				<tr>
+					<th>تاریخ</th>
+					<td>{{.Date}}</td>
+				</tr>
+			</table>
+		</header>
+
+		<!-- Seller and buyer -->
+		<section class="parties">
+			<div class="party">
+				<h2>فروشنده</h2>
+				{{if .Seller}}
+					<p class="name">{{.Seller}}</p>
+				{{else}}
+					<p class="name empty">—</p>
+				{{end}}
+			</div>
+
+			<div class="party">
+				<h2>خریدار</h2>
+				<p class="name">{{.Invoice.Customer}}</p>
+			</div>
+		</section>
+
+		<!-- Line items -->
+		<table class="items">
+			<thead>
+				<tr>
+					<th class="col-no">ردیف</th>
+					<th class="col-code">کد کالا</th>
+					<th>شرح کالا / خدمات</th>
+					<th class="col-qty">تعداد</th>
+					<th class="col-money">قیمت واحد (تومان)</th>
+					{{if .HasDiscount}}<th class="col-discount">تخفیف</th>{{end}}
+					<th class="col-money">مبلغ کل (تومان)</th>
+				</tr>
+			</thead>
+
+			<tbody>
+				{{range $i, $item := .Items}}
+				<tr>
+					<td class="col-no">{{inc $i}}</td>
+					<td class="col-code">{{if $item.TechnicalCode}}{{$item.TechnicalCode}}{{else}}<span class="empty">—</span>{{end}}</td>
+					<td class="description">{{$item.Description}}</td>
+					<td class="col-qty">{{$item.Quantity}}</td>
+					<td class="col-money">{{money $item.UnitPrice}}</td>
+					{{if $.HasDiscount}}
+					<td class="col-discount">
+						{{if $item.DiscountPercent}}{{pct $item.DiscountPercent}}{{else}}<span class="empty">—</span>{{end}}
+					</td>
+					{{end}}
+					<td class="col-money">{{money $item.Price}}</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+
+		<!-- Grand total only: no tax, no intermediate sums -->
+		<table class="totals">
+			<tr class="grand">
+				<td>جمع کل</td>
+				<td class="amount">{{money .Total}}<span class="unit">تومان</span></td>
+			</tr>
+		</table>
+
+		{{if .Invoice.Description}}
+		<section class="notes">
+			<h2>توضیحات</h2>
+			<p>{{.Invoice.Description}}</p>
+		</section>
+		{{end}}
+
+		<footer class="footer">
+			از اعتماد شما سپاسگزاریم.
+
+			<div class="signatures">
+				<div class="signature">
+					<div class="line">مهر و امضای فروشنده</div>
+				</div>
+				<div class="signature">
+					<div class="line">امضای خریدار</div>
+				</div>
+			</div>
+		</footer>
+
+	</div>
+</body>
+</html>
