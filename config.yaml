@@ -1,0 +1,34 @@
+# Invoice Generator — company (seller) configuration.
+#
+# Roadmap steps 23 (Company Information) and 24 (Logo Support).
+#
+# This file is OPTIONAL. If it is absent the generator still produces a
+# valid, unbranded invoice. Every field below is also optional: omit or
+# blank out anything you do not want printed.
+#
+# Loaded by `invoice generate <file> --config config.yaml`
+# (the --config flag defaults to this path).
+
+company:
+  # Legal / trading name shown in the header and the "seller" box.
+  name: "شرکت فاکتورساز نمونه"
+
+  # Logo image. Path is resolved relative to the directory the CLI is run
+  # from. Supported formats: png, jpg, jpeg, svg, gif, webp.
+  # If the file is missing or unreadable, NO logo space is rendered.
+  logo: ./assets/logo.png
+
+  phone:   "+98 21 1234 5678"
+  email:   info@example.com
+  address: "تهران، ایران"
+  website: "https://example.com"
+
+  # Economic / VAT registration number.
+  tax_id: "1234567890"
+
+# Reserved for roadmap step 22 (default currency, tax rate, output dir).
+# Currently ignored by the generator.
+invoice:
+  currency: IRR
+  tax_rate: 10
+  output_dir: ./output

@@ -9,12 +9,16 @@
 package pdf
 
 import (
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"invoice-generator/internal/config"
 	"invoice-generator/internal/invoice"
 	"invoice-generator/templates"
 )
@@ -48,9 +52,16 @@ type View struct {
 	// template would hide the layout choice deep inside the HTML.
 	Date string
 
-	// Seller is the name shown in the "seller" box. It is empty until
-	// company information is configurable (roadmap step 23).
-	Seller string
+	// Company is the seller's branding, loaded from configuration
+	// (roadmap steps 23 and 24). It may be zero when no config file is
+	// present, in which case the template falls back to a placeholder.
+	Company config.Company
+
+	// Logo is the company logo rendered as an inline data: URI, ready to
+	// drop straight into an <img src>. It is empty when no logo is
+	// configured or the file cannot be read, so the template can skip it
+	// without leaving blank space (roadmap step 24).
+	Logo string
 
 	// HasDiscount tells the template whether to render the discount
 	// column. Persian invoices omit it entirely when nothing is
@@ -62,11 +73,16 @@ type View struct {
 
 // NewView builds the template data for an invoice whose items have already
 // been priced and whose total has already been calculated.
-func NewView(inv invoice.Invoice, total int64) View {
+//
+// company carries the seller's branding (name, contact, logo). A zero value
+// is perfectly valid and simply produces an unbranded invoice.
+func NewView(inv invoice.Invoice, total int64, company config.Company) View {
 	view := View{
-		Invoice: inv,
-		Items:   inv.Items,
-		Total:   total,
+		Invoice:     inv,
+		Items:       inv.Items,
+		Total:       total,
+		Company:     company,
+		Logo:        resolveLogo(company.Logo),
 		FontFaceCSS: template.CSS(FontFaceCSS()),
 	}
 
@@ -126,4 +142,44 @@ func ParseTemplate() (*template.Template, error) {
 		return nil, fmt.Errorf("failed to parse invoice template: %w", err)
 	}
 	return tmpl, nil
+}
+
+// resolveLogo turns a logo file path into an inline data: URI so the PDF
+// renderer does not depend on the filesystem layout Chromium sees. A missing
+// or unreadable logo yields an empty string, which the template treats as
+// "no logo" (roadmap step 24: the invoice stays valid without a logo).
+//
+// The path is interpreted relative to the process working directory, so a
+// config that sets "logo: ./assets/logo.png" resolves from wherever the CLI
+// is run. An absolute path is used as-is.
+func resolveLogo(logoPath string) string {
+	if logoPath == "" {
+		return ""
+	}
+
+	data, err := os.ReadFile(logoPath)
+	if err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("data:%s;base64,%s",
+		logoMIME(logoPath), base64.StdEncoding.EncodeToString(data))
+}
+
+// logoMIME maps a logo file extension to its image MIME type.
+func logoMIME(path string) string {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".svg":
+		return "image/svg+xml"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	default:
+		return "image/png"
+	}
 }

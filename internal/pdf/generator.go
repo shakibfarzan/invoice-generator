@@ -9,6 +9,7 @@ import (
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
+	"invoice-generator/internal/config"
 	"invoice-generator/internal/invoice"
 )
 
@@ -23,11 +24,13 @@ const (
 //
 // Items must already be priced (invoice.ComputeItemPrices) and total must
 // already be calculated (invoice.CalculateTotal); the PDF layer never
-// computes business values.
+// computes business values. company carries the seller's branding (name,
+// contact, logo) from configuration; a zero value produces an unbranded
+// invoice.
 //
 // The caller controls cancellation and timeouts through ctx.
-func Generate(ctx context.Context, inv invoice.Invoice, total int64, outputPath string) error {
-	html, err := Render(NewView(inv, total))
+func Generate(ctx context.Context, inv invoice.Invoice, total int64, outputPath string, company config.Company) error {
+	html, err := Render(NewView(inv, total, company))
 	if err != nil {
 		return err
 	}

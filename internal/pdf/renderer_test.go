@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"invoice-generator/internal/config"
 	"invoice-generator/internal/invoice"
 )
 
@@ -43,7 +44,7 @@ func renderSample(t *testing.T, discount float32) string {
 	invoice.ComputeItemPrices(inv.Items)
 	total := invoice.CalculateTotal(inv)
 
-	html, err := Render(NewView(inv, total))
+	html, err := Render(NewView(inv, total, config.Company{}))
 	if err != nil {
 		t.Fatalf("Render returned error: %v", err)
 	}
@@ -110,7 +111,7 @@ func TestRenderEscapesUntrustedValues(t *testing.T) {
 	inv := sampleInvoice(0)
 	inv.Customer = "<b>alert</b>"
 
-	html, err := Render(NewView(inv, 1750000))
+	html, err := Render(NewView(inv, 1750000, config.Company{}))
 	if err != nil {
 		t.Fatalf("Render returned error: %v", err)
 	}
@@ -126,7 +127,7 @@ func TestRenderEscapesUntrustedValues(t *testing.T) {
 func TestRenderEmptyInvoice(t *testing.T) {
 	var inv invoice.Invoice
 
-	html, err := Render(NewView(inv, 0))
+	html, err := Render(NewView(inv, 0, config.Company{}))
 	if err != nil {
 		t.Fatalf("Render returned error: %v", err)
 	}
