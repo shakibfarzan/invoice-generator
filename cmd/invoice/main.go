@@ -17,6 +17,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"invoice-generator/internal/config"
 	"invoice-generator/internal/input"
 	"invoice-generator/internal/invoice"
 	"invoice-generator/internal/pdf"
@@ -37,6 +38,8 @@ var (
 	flagCustomer string
 	// Where the generated PDF is written.
 	flagOutput string
+	// Path to the optional company configuration file (roadmap steps 23/24).
+	flagConfig string
 )
 
 // ---------------------------------------------------------------------------
@@ -88,6 +91,8 @@ the --number, --date, and --customer flags.`,
 		"customer name (required when input is CSV)")
 	generateCmd.Flags().StringVarP(&flagOutput, "output", "o", "output",
 		"directory where the PDF is written")
+	generateCmd.Flags().StringVar(&flagConfig, "config", "config.yaml",
+		"path to the company config file (optional; controls branding/logo)")
 
 	// Wire the subcommand into the root.
 	rootCmd.AddCommand(generateCmd)
@@ -127,11 +132,20 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	invoice.ComputeItemPrices(inv.Items)
 	total := invoice.CalculateTotal(inv)
 
-	// 4. Print summary -------------------------------------------------------
-	printSummary(inv, total)
+	// 4. Load company branding (optional) -----------------------------------
+	// Roadmap steps 23/24: the seller's name, contact details and logo live
+	// in configuration, not in the invoice file. A missing or empty config
+	// just means an unbranded invoice.
+	cfg, err := config.Load(flagConfig)
+	if err != nil {
+		return err
+	}
 
-	// 5. Write the PDF -------------------------------------------------------
-	outputPath, err := writePDF(inv, total)
+	// 5. Print summary -------------------------------------------------------
+	printSummary(inv, total, cfg.Company)
+
+	// 6. Write the PDF -------------------------------------------------------
+	outputPath, err := writePDF(inv, total, cfg.Company)
 	if err != nil {
 		return err
 	}
@@ -145,7 +159,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 // writePDF — render an invoice and save it as output/invoice-<number>.pdf.
 // ---------------------------------------------------------------------------
 
-func writePDF(inv invoice.Invoice, total int64) (string, error) {
+func writePDF(inv invoice.Invoice, total int64, company config.Company) (string, error) {
 	// Roadmap step 17: the file name is derived from the invoice number,
 	// so that number has to be made safe before it touches the filesystem.
 	outputPath := filepath.Join(flagOutput, "invoice-"+sanitizeFilePart(inv.Number)+".pdf")
@@ -153,7 +167,7 @@ func writePDF(inv invoice.Invoice, total int64) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), pdfTimeout)
 	defer cancel()
 
-	if err := pdf.Generate(ctx, inv, total, outputPath); err != nil {
+	if err := pdf.Generate(ctx, inv, total, outputPath, company); err != nil {
 		return "", err
 	}
 	return outputPath, nil
@@ -235,12 +249,15 @@ func parseInput(path string) (invoice.Invoice, error) {
 // printSummary — human-readable output (until PDF generation lands).
 // ---------------------------------------------------------------------------
 
-func printSummary(inv invoice.Invoice, total int64) {
+func printSummary(inv invoice.Invoice, total int64, company config.Company) {
 	fmt.Println()
 	fmt.Println("✓ Invoice is valid!")
 	fmt.Println()
 
 	// Metadata
+	if company.Name != "" {
+		fmt.Printf("  Seller:     %s\n", company.Name)
+	}
 	fmt.Printf("  Invoice #:  %s\n", inv.Number)
 	fmt.Printf("  Date:       %s\n", inv.Date.Format("2006-01-02"))
 	fmt.Printf("  Customer:   %s\n", inv.Customer)
